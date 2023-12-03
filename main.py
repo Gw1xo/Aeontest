@@ -1,72 +1,62 @@
-from selenium.webdriver.common.by import By
 from time import sleep
 from fake_useragent import UserAgent
 from auth_data import URL, EMAIL, PASSWORD
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium import webdriver
+from locators import *
 
-EMAILFIELD = (By.ID, "i0116")
-PASSWORDFIELD = (By.ID, "i0118")
-NEXTBUTTON = (By.ID, "idSIButton9")
-TOKENFIELD = (By.ID, 'tokenString')
-FLAGBUTTON = (By.ID, 'nextButton')
 
 # user_agent
 useragent = UserAgent()
 
+# options
+options = webdriver.ChromeOptions()
+options.add_argument(f"user-agent={useragent.random}")
+options.add_argument("--disable-blink-features=AutomationControlled")
+options.add_argument("--headless")
+
 # driver
-driver = webdriver.Chrome()
+driver = webdriver.Chrome(options=options)
 
 # wait
 wait = WebDriverWait(driver, 20)
 
+
 try:
     driver.get(URL)
 
-    # wait for email field and enter email
-    wait.until(EC.element_to_be_clickable(EMAILFIELD)).send_keys(EMAIL)
+    # Passing authentication
+    print("Passing authentication...")
+    wait.until(EC.element_to_be_clickable(EMAIL_FIELD)).send_keys(EMAIL)
+    wait.until(EC.element_to_be_clickable(NEXT_BUTTON)).click()
+    wait.until(EC.element_to_be_clickable(PASSWORD_FIELD)).send_keys(PASSWORD)
+    wait.until(EC.element_to_be_clickable(NEXT_BUTTON)).click()
 
-    # Click Next
-    wait.until(EC.element_to_be_clickable(NEXTBUTTON)).click()
-
-    # wait for password field and enter password
-    wait.until(EC.element_to_be_clickable(PASSWORDFIELD)).send_keys(PASSWORD)
-
-    # Click Login - same id?
-    wait.until(EC.element_to_be_clickable(NEXTBUTTON)).click()
-
+    # The next button sometimes has different ids
     driver.implicitly_wait(5)
-    if bool(driver.find_elements(by=By.ID, value='idSIButton9')):
-        driver.find_element(by=By.ID, value='idSIButton9').click()
+    if bool(driver.find_elements(*NEXT_BUTTON)):
+        driver.find_element(*NEXT_BUTTON).click()
     else:
-        driver.find_element(by=By.ID, value='acceptButton').click()
+        driver.find_element(*ACCEPT_BUTTON).click()
+    print("Authentication passed")
 
-    sleep(15)
-
-    # Знаходження всіх фреймів на сторінці
-    frames = driver.find_elements(By.TAG_NAME, "iframe")
-
-    # Перевірка, чи є фрейми
-    if len(frames) == 0:
-        print("На сторінці немає фреймів.")
-    else:
-        print(f"На сторінці є {len(frames)} фреймів.")
-
+    sleep(10)
+    frames = driver.find_elements(*FRAMES)
     driver.switch_to.frame(frames[0])
 
-    element = wait.until(EC.presence_of_element_located(TOKENFIELD))
+    # Token validity check
+    element = wait.until(EC.presence_of_element_located(TOKEN_FIELD))
     element.send_keys("3D9TY-GR6K4-FGYCP-V4YKM-TRG6Z")
 
+    print("Check token")
     sleep(4)
-    flag = wait.until(EC.presence_of_element_located(FLAGBUTTON))
-
+    flag = wait.until(EC.presence_of_element_located(FLAG_BUTTON))
     if flag.is_enabled():
-        print("Valid token")
+        print("Token is valid")
     else:
-        print("Invalid token")
+        print("Token is invalid")
 
-    sleep(20)
 except Exception as ex:
     print(ex)
 finally:
