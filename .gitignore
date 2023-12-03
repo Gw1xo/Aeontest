@@ -2,3 +2,4 @@ venv
 auth_data.py
 .idea
 __pycache__
+userdata
