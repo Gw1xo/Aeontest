@@ -36,12 +36,11 @@ def get_webdriver():
         raise
 
     # wait
-    wait = WebDriverWait(driver, 30)
+    wait = WebDriverWait(driver, 10)
     return driver, wait
 
 
 def authenticate(driver, wait, data):
-
     email = data.get('email', None)
     password = data.get('password', None)
 
@@ -53,8 +52,7 @@ def authenticate(driver, wait, data):
         wait.until(EC.element_to_be_clickable(EMAIL_FIELD)).send_keys(email)
         wait.until(EC.element_to_be_clickable(NEXT_BUTTON)).click()
 
-        sleep(2)
-        if is_element_present(driver, EMAIL_ERROR):
+        if is_element_present(driver, wait, EMAIL_ERROR):
             handle_login_error("Login error")
 
         # logger.info("Email passed")
@@ -62,8 +60,7 @@ def authenticate(driver, wait, data):
         wait.until(EC.element_to_be_clickable(PASSWORD_FIELD)).send_keys(password)
         wait.until(EC.element_to_be_clickable(NEXT_BUTTON)).click()
 
-        sleep(2)
-        if is_element_present(driver, PASSWORD_ERROR):
+        if is_element_present(driver, wait, PASSWORD_ERROR):
             handle_login_error("Password error")
 
         # logger.info("Password passed")
@@ -74,9 +71,10 @@ def authenticate(driver, wait, data):
         handle_login_error("Unexpected error during authentication")
 
 
-def is_element_present(driver, locator):
+def is_element_present(driver, wait, locator):
     try:
-        return bool(driver.find_element(*locator))
+        wait.until(driver.find_element(*locator))
+        return True
     except:
         return False
 
@@ -91,42 +89,42 @@ class AuthenticationError(Exception):
 
 
 def check_token(driver, wait, token: str):
-    result = {token: None}
     try:
-        sleep(10)
-        frames = driver.find_elements(*FRAMES)
-        driver.switch_to.frame(frames[0])
+        frame = WebDriverWait(driver, 30).until(lambda _: driver.find_element(*FRAME))
+        driver.switch_to.frame(frame)
+    except:
+        logger.error("Not switch frame")
 
-        # Token validity check
-        element = wait.until(EC.presence_of_element_located(TOKEN_FIELD))
-        element.send_keys(token)
+    # Token validity check
+    try:
+        token_field = wait.until(EC.visibility_of_element_located(TOKEN_FIELD))
+        token_field.send_keys(token)
+    except:
+        logger.error("Not find token field")
 
-        # logger.info("Check token")
-        sleep(4)
-        flag = wait.until(EC.presence_of_element_located(FLAG_BUTTON))
-        if flag.is_enabled():
-            logger.info(f"Token {token} is valid")
-            result = {token: "valid"}
-        else:
-            logger.info(f"Token {token} is invalid")
-            result = {token: "invalid"}
-    except Exception as e:
-        logger.error(f"Error during token check: {e}")
-    finally:
-        driver.close()
-        driver.quit()
+    # logger.info("Check token")
+    try:
+        WebDriverWait(driver, 5).until(EC.presence_of_element_located(FLAG))
+        logger.info(f"Token {token} is invalid")
+        result = {token: "valid"}
+    except:
+        logger.info(f"Token {token} is valid")
+        result = {token: "invalid"}
 
     return result
 
 
 def start_single_check(token, data):
+    driver, wait = get_webdriver()
     result = {token, None}
     try:
-        driver, wait = get_webdriver()
         authenticate(driver, wait, data)
         result = check_token(driver, wait, token)
     except Exception as e:
         logger.error(f"Script execution failed: {e}")
+    finally:
+        driver.close()
+        driver.quit()
 
     return result
 
@@ -135,7 +133,7 @@ def start_pool_check(data_path: str, data, filename):
     try:
         tokens = read_tokens(file_path=data_path)
         partial_check = partial(start_single_check, data=data)
-        p = Pool(processes=len(tokens) if len(tokens) <= 50 else 50)
+        p = Pool(processes=len(tokens) if len(tokens) <= 4 else 4)
         results = p.map(partial_check, tokens)
 
         p.close()
