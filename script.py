@@ -106,10 +106,10 @@ def check_token(driver, wait, token: str):
     try:
         WebDriverWait(driver, 5).until(EC.presence_of_element_located(FLAG))
         logger.info(f"Token {token} is invalid")
-        result = {token: "valid"}
+        result = {token: "invalid"}
     except:
         logger.info(f"Token {token} is valid")
-        result = {token: "invalid"}
+        result = {token: "valid"}
 
     return result
 
