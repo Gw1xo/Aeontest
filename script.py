@@ -26,7 +26,7 @@ def get_webdriver():
     options = webdriver.ChromeOptions()
     options.add_argument(f"user-agent={useragent.random}")
     options.add_argument("--disable-blink-features=AutomationControlled")
-    # options.add_argument("--headless")
+    options.add_argument("--headless")
 
     # driver
     try:
