@@ -3,6 +3,7 @@
 This app is for validating tokens for Xbox
 
 ## Install
+if you use windows, download from the windows branch
 
 1. install dependencies
    - pip install -r requirements.txt
