@@ -1,16 +1,16 @@
+import os
+
 from excel_parser import read_tokens, write_result
-from time import sleep
 from fake_useragent import UserAgent
 from selenium.common import WebDriverException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium import webdriver
-from functools import partial, reduce
+from functools import partial
 from locators import *
 from userdata_handler import get_user_data
 from log import get_logger
 from multiprocessing import Pool
-import sys
 
 URL = "https://account.microsoft.com/billing/redeem?ref=xboxcom"
 
@@ -26,7 +26,7 @@ def get_webdriver():
     options = webdriver.ChromeOptions()
     options.add_argument(f"user-agent={useragent.random}")
     options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--headless")
+    # options.add_argument("--headless")
 
     # driver
     try:
@@ -36,7 +36,7 @@ def get_webdriver():
         raise
 
     # wait
-    wait = WebDriverWait(driver, 10)
+    wait = WebDriverWait(driver, 100)
     return driver, wait
 
 
@@ -90,7 +90,7 @@ class AuthenticationError(Exception):
 
 def check_token(driver, wait, token: str):
     try:
-        frame = WebDriverWait(driver, 30).until(lambda _: driver.find_element(*FRAME))
+        frame = WebDriverWait(driver, 100).until(lambda _: driver.find_element(*FRAME))
         driver.switch_to.frame(frame)
     except:
         logger.error("Not switch frame")
@@ -131,9 +131,10 @@ def start_single_check(token, data):
 
 def start_pool_check(data_path: str, data, filename):
     try:
+        num_processors = os.cpu_count()
         tokens = read_tokens(file_path=data_path)
         partial_check = partial(start_single_check, data=data)
-        p = Pool(processes=len(tokens) if len(tokens) <= 4 else 4)
+        p = Pool(processes=len(tokens) if len(tokens) <= num_processors else num_processors)
         results = p.map(partial_check, tokens)
 
         p.close()
