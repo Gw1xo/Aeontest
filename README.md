@@ -12,5 +12,4 @@ This app is for validating tokens for Xbox
 
 ## Known issues
 1. lousy data storage
-2. no multi-threaded request to validate many tokens
-3. crutches are present
+2. crutches are present
