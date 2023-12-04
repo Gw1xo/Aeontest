@@ -1,11 +1,20 @@
-import json
 import sys
-from getpass import getpass
 from os import path, mkdir
 from art import tprint
 from script import start_single_check, start_pool_check
-from simple_term_menu import TerminalMenu
 from userdata_handler import create_user_datafile, get_user_data, check_scrapper_data
+
+
+class Menu:
+    def __init__(self, items):
+        self.items = items
+
+    def show(self):
+        [print(item) for item in self.items]
+        choose = int(input("Enter the number of the desired action: "))
+        if not (choose in range(1, len(self.items) + 1)):
+            raise Exception("Invalid input, try again")
+        return choose - 1
 
 
 def user_init() -> str:
@@ -17,7 +26,7 @@ def create_user(auth_file_path):
     email = input("Enter your email: ")
 
     # Use getpass to hide password input on the terminal
-    password = getpass("Enter your password: ")
+    password = input("Enter your password: ")
     create_user_datafile(auth_file_path, email, password)
 
 
@@ -35,26 +44,35 @@ def app_process():
     if not check_scrapper_data(username):
         create_user(auth_file_path)
 
-    menu = TerminalMenu([
-        "Check Single Token",
-        "Check Multiple Tokens",
-        "Print my data",
-        "Change the data",
-        "Change user",
-        "Exit"
-    ])
-    return_menu = TerminalMenu(['Return'])
+    menu_items = [
+        "1 - Check Single Token",
+        "2 - Check Multiple Tokens",
+        "3 - Print my data",
+        "4 - Change the data",
+        "5 - Change user",
+        "6 - Exit"
+    ]
+    return_menu_items = ['1 - Return']
+
+    menu = Menu(menu_items)
+    return_menu = Menu(return_menu_items)
 
     print("\033c", end="")
 
     while True:
 
         tprint(banner_text)
-        menu.show()
-
         auth_data = get_user_data(auth_file_path)
 
-        match menu.chosen_menu_index:
+        while True:
+            try:
+                chosen = menu.show()
+                break
+            except Exception as e:
+                print(e)
+                continue
+
+        match chosen:
             case 0:
                 token = input("Enter token: ")
                 start_single_check(token=token,
